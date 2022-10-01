@@ -1,6 +1,5 @@
 from random import randrange
-from statistics import mode
-from typing import Optional
+from typing import Optional, List
 from fastapi import FastAPI, Response, status, HTTPException, Depends
 from fastapi.params import Body
 from pydantic import BaseModel
@@ -70,15 +69,15 @@ def root():
     return {"message": "Nice update"}
 
 
-@app.get("/posts")
+@app.get("/posts", response_model=List[schemas.PostResponse])
 def get_posts(db: Session = Depends(get_db)):
     # cursor.execute("""SELECT * FROM posts;""")
     # posts = cursor.fetchall()
     posts = db.query(models.Post).all()
-    return {"data": posts}
+    return posts
 
 
-@app.post("/posts", status_code=status.HTTP_201_CREATED)
+@app.post("/posts", status_code=status.HTTP_201_CREATED, response_model=schemas.PostResponse)
 def create_posts(post: schemas.PostCreate, db: Session = Depends(get_db)):
     # cursor.execute("""INSERT INTO posts (title, content, published) VALUES(%s, %s, %s) RETURNING *""",
     #                (post.title, post.content, post.published))
@@ -88,10 +87,10 @@ def create_posts(post: schemas.PostCreate, db: Session = Depends(get_db)):
     db.add(new_post)
     db.commit()
     db.refresh(new_post)
-    return {"data": new_post}
+    return new_post
 
 
-@app.get("/posts/latest")
+@app.get("/posts/latest", response_model=schemas.PostResponse)
 def get_latest_post(db: Session = Depends(get_db)):
     # cursor.execute("""SELECT * FROM posts ORDER BY id DESC LIMIT 1 """)
     # post = cursor.fetchone()
@@ -99,11 +98,11 @@ def get_latest_post(db: Session = Depends(get_db)):
     # count = post_query.count(models.Post.id)
     # print(count)
     queried_post = post_query.first()
-    return {"data": queried_post}
+    return queried_post
 # {id} represent path parameter
 
 
-@app.get("/posts/{id}")
+@app.get("/posts/{id}", response_model=schemas.PostResponse)
 def get_post(id: int, db: Session = Depends(get_db)):
     # print(type(id))
     # cursor.execute("""SELECT * FROM posts WHERE id = %s """, (str(id),))
@@ -113,7 +112,7 @@ def get_post(id: int, db: Session = Depends(get_db)):
     if not queried_post:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                             detail=f"post with id: {id} does not exist")
-    return {"data": post_query.first()}
+    return post_query.first()
 
 
 @app.delete("/posts/{id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -133,7 +132,7 @@ def delete_post(id: int, db: Session = Depends(get_db)):
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-@app.put("/posts/{id}", status_code=status.HTTP_202_ACCEPTED)
+@app.put("/posts/{id}", status_code=status.HTTP_202_ACCEPTED, response_model=schemas.PostResponse)
 def update_post(post: schemas.PostCreate, id: int, db: Session = Depends(get_db)):
     # cursor.execute("""UPDATE posts SET title = %s, content = %s, published= %s WHERE id = %s RETURNING * """,
     #                (post.title, post.content, post.published, str(id),))
@@ -148,4 +147,4 @@ def update_post(post: schemas.PostCreate, id: int, db: Session = Depends(get_db)
     post_query.update(post.dict(), synchronize_session=False)
     db.commit()
     updated_post = post_query.first()
-    return {"data": updated_post}
+    return updated_post
