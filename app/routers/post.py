@@ -16,8 +16,7 @@ def get_posts(db: Session = Depends(get_db),
         oauth2.get_current_user)):
     # cursor.execute("""SELECT * FROM posts;""")
     # posts = cursor.fetchall()
-    posts = db.query(models.Post).filter(
-        models.Post.author_id == current_user.id).all()
+    posts = db.query(models.Post).all()
     return posts
 
 
