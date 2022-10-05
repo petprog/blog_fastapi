@@ -16,7 +16,8 @@ def get_posts(db: Session = Depends(get_db),
         oauth2.get_current_user)):
     # cursor.execute("""SELECT * FROM posts;""")
     # posts = cursor.fetchall()
-    posts = db.query(models.Post).all()
+    posts = db.query(models.Post).filter(
+        models.Post.author_id == current_user.id).all()
     return posts
 
 
@@ -62,6 +63,10 @@ def get_post(id: int, db: Session = Depends(get_db), current_user: schemas.UserR
     if not queried_post:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                             detail=f"post with id: {id} does not exist")
+    if queried_post.author_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                            detail=f"Not authorized to perform requested action")
+        
     return post_query.first()
 
 
@@ -84,8 +89,6 @@ def delete_post(id: int, db: Session = Depends(get_db), current_user: schemas.Us
     post_query.delete(synchronize_session=False)
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
-
-    
 
 
 @router.put("/{id}", status_code=status.HTTP_202_ACCEPTED, response_model=schemas.PostResponse)
